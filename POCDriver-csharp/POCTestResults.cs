@@ -25,12 +25,12 @@ namespace POCDriver_csharp
 
         public POCTestResults() {
             startTime = DateTime.Now;
-            lastIntervalTime = new DateTime();
+            lastIntervalTime = DateTime.Now;
             opStats = new ConcurrentDictionary<String, POCopStats>();
 
-            foreach (String s in opTypes) {
-                var newValue = new POCopStats();
-                opStats.AddOrUpdate(s, newValue, (key, oldValue) => newValue);
+            foreach (var s in opTypes) {
+                var newValue = new POCopStats();                
+                opStats.TryAdd(s, newValue);
             }
         }
 
