@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <StartupObject />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\POCDriver-csharp\LoadRunner.cs" Link="LoadRunner.cs" />
+    <Compile Include="..\POCDriver-csharp\MongoWorker.cs" Link="MongoWorker.cs" />
+    <Compile Include="..\POCDriver-csharp\POCDriver.cs" Link="POCDriver.cs" />
+    <Compile Include="..\POCDriver-csharp\POCopStats.cs" Link="POCopStats.cs" />
+    <Compile Include="..\POCDriver-csharp\POCTestOptions.cs" Link="POCTestOptions.cs" />
+    <Compile Include="..\POCDriver-csharp\POCTestReporter.cs" Link="POCTestReporter.cs" />
+    <Compile Include="..\POCDriver-csharp\POCTestResults.cs" Link="POCTestResults.cs" />
+    <Compile Include="..\POCDriver-csharp\TestRecord.cs" Link="TestRecord.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.2.1" />
+    <PackageReference Include="Commons" Version="0.2.4.731" />
+    <PackageReference Include="Lorem.NET" Version="1.0.6" />
+    <PackageReference Include="MathNet.Numerics" Version="4.4.1" />
+    <PackageReference Include="MongoDB.Driver" Version="2.6.1" />
+    <PackageReference Include="NLog" Version="4.5.4" />
+  </ItemGroup>
+
+</Project>

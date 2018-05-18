@@ -175,7 +175,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /y $(TargetDir)*.exe C:\publish\$(ConfigurationName)\
-xcopy /y $(TargetDir)*.dll C:\publish\$(ConfigurationName)\</PostBuildEvent>
+    <PostBuildEvent>xcopy /y $(TargetDir)*.exe C:\publish\$(ProjectName)\$(ConfigurationName)\
+xcopy /y $(TargetDir)*.dll C:\publish\$(ProjectName)\$(ConfigurationName)\</PostBuildEvent>
   </PropertyGroup>
 </Project>

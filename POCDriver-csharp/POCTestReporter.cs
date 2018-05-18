@@ -58,26 +58,28 @@ namespace POCDriver_csharp
                 "After {0} seconds, {1:#,##0} new records inserted - collection has {2:#,##0} in total \n",
                     testResults.GetSecondsElapsed(), insertsDone, testResults.initialCount + insertsDone));
 
-            var results = testResults.GetOpsPerSecondLastInterval();            
+            var results = testResults.GetOpsPerSecondLastInterval();
 
             foreach (var o in POCTestResults.opTypes)
             {
-                logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:#,##0} {1} per second since last report ", results[o], o));               
-
+                var begin = String.Format(CultureInfo.CurrentUICulture, "{0:#,##0} {1} per second since last report ", results[o], o);
+                var end = "";
                 var opsDone = testResults.GetOpsDone(o);
                 if (opsDone > 0)
                 {
                     var fastops = 100 - (testResults.GetSlowOps(o) * 100.0) / opsDone;
-                    logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1} milliseconds",
-                        fastops, testOpts.slowThreshold));
+                    end = String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1} milliseconds",
+                        fastops, testOpts.slowThreshold);
                 }
                 else
                 {
-                    logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1} milliseconds",
-                        (float)100, testOpts.slowThreshold));
+                    end = String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1} milliseconds",
+                        (float)100, testOpts.slowThreshold);
                 }
+                if (o == "rangequeries")
+                    end = end + "\n";
+                logger.Info($"{begin} {end}");
             }
-            logger.Info("\n");
         }
 
         public Task run()
@@ -107,6 +109,11 @@ namespace POCDriver_csharp
                 logger.Info(String.Format(CultureInfo.CurrentUICulture,
                     "{0} {1} per second on average", (int)(1f * opsDone / secondsElapsed), o));
             }
+        }
+
+        internal void Cancel()
+        {
+            timer.Dispose();
         }
     }
 }

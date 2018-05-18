@@ -76,7 +76,7 @@ namespace POCDriver_csharp
         [Option('u', HelpText = "Ratio of update operations", Default = 100)]
         public int updates { get; set; }
 
-        [Option('v', HelpText = "Specify a set of ordered operations per thread from [iukp]", Default = null)]
+        [Option('v', HelpText = "Specify a set of ordered operations per thread from [iukp]", Default = "i")]
         public string workflow { get; set; }
 
         [Option("nosharding", HelpText = "Do not shard the collection", Default = false)]

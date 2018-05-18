@@ -34,6 +34,7 @@ namespace POCDriver_csharp
     {
         private MongoClient mongoClient;
         private Logger logger;
+        private bool isCancelled = false;
 
         private void PrepareSystem(POCTestOptions testOpts, POCTestResults results)
         {
@@ -165,8 +166,12 @@ namespace POCDriver_csharp
 
                 Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e) {
                     e.Cancel = true;
-                    foreach (var worker in workers)
+                    if (isCancelled)
+                        return;
+                    isCancelled = true;
+                    foreach (var worker in workers)                 
                         worker.Cancel();
+                    reporter.Cancel();
                     logger.Info("Cancellation requested - waiting on threads to finish");
                 };
 
