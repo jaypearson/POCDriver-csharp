@@ -25,35 +25,17 @@ namespace POCDriver_csharp
         public BsonDocument internalDoc;
         private Random rng;
         private static List<List<Int32>> ar;
-        private static String loremText = null;
 
         private static BsonBinaryData blobData = null;
 
         private String CreateString(int length)
-        {
-            if (loremText == null)
-            {
-                //Console.Out.WriteLine("Generating sample data");
-                loremText = Lorem.Words(1000);
-            }
-
-
+        { 
+            //Console.Out.WriteLine("Generating sample data");
+            var loremText = Lorem.Words(1000);
             //Console.Out.WriteLine("Done");
 
-            StringBuilder sb = new StringBuilder();
-            Double d = rng.NextDouble();
-
-            int loremLen = 512;
-            int r = (int)Math.Abs(Math.Floor(d * (loremText.Length - (loremLen + 20))));
-            int e = r + loremLen;
-
-            while (loremText[r] != ' ') r++; r++;
-            while (loremText[e] != ' ') e++;
-            String chunk = loremText.Substring(r, e);
-
-            sb.Append(chunk);
-
-
+            var sb = new StringBuilder(loremText);
+            
             //Double to size
 
             while (sb.Length < length)
@@ -64,12 +46,7 @@ namespace POCDriver_csharp
 
             //Trim to fit
             String rs = sb.ToString().Substring(0, length);
-
-            //Remove partial words
-            r = 0;
-            e = rs.Length - 1;
-            while (rs[e] != ' ') e--;
-            rs = rs.Substring(r, e);
+           
             return rs;
         }
 
@@ -148,7 +125,7 @@ namespace POCDriver_csharp
                         ar.Add(sa);
                     }
                 }
-                internalDoc.Add("arr", ar.ToBsonDocument());
+                internalDoc.Add("arr", BsonArray.Create(ar));
             }
             if (blobData == null)
             {
