@@ -21,6 +21,8 @@ using NLog;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace POCDriver_csharp
 {
@@ -30,6 +32,7 @@ namespace POCDriver_csharp
         private MongoClient mongoClient;
         private POCTestOptions testOpts;
         private Logger logger;
+        private Timer timer;
 
         public POCTestReporter(POCTestResults r, MongoClient mc, POCTestOptions t)
         {
@@ -39,52 +42,48 @@ namespace POCDriver_csharp
             logger = LogManager.GetLogger("POCTestReporter");
         }
 
-        private void logData()
-        { 
-
+        private void logData(Object args)
+        {
+            timer.Change(testOpts.reportTime * 1000, Timeout.Infinite);
             Int64 insertsDone = testResults.GetOpsDone("inserts");
-            if (testResults.GetSecondsElapsed() < testOpts.reportTime)
-                return;
             logger.Info("------------------------");
             if (testOpts.sharded && !testOpts.singleserver)
             {
-                IMongoDatabase configdb = mongoClient.GetDatabase("config");
-                IMongoCollection<BsonDocument> shards = configdb.GetCollection<BsonDocument>("shards");
+                var configdb = mongoClient.GetDatabase("config");
+                var shards = configdb.GetCollection<BsonDocument>("shards");
                 testOpts.numShards = (int)shards.Count(new BsonDocument());
             }
-            DateTime todaysdate = DateTime.Now;
-            logger.Info(string.Format("After %d seconds (%s), %,d new records inserted - collection has %,d in total \n",
-                    testResults.GetSecondsElapsed(), todaysdate.ToShortTimeString(), insertsDone, testResults.initialCount + insertsDone));
 
-            Dictionary<String, Int64> results = testResults.GetOpsPerSecondLastInterval();
-            String[] opTypes = POCTestResults.opTypes;
+            logger.Info(string.Format(CultureInfo.CurrentUICulture,
+                "After {0} seconds, {1:#,##0} new records inserted - collection has {2:#,##0} in total \n",
+                    testResults.GetSecondsElapsed(), insertsDone, testResults.initialCount + insertsDone));
 
-            foreach (var o in opTypes)
+            var results = testResults.GetOpsPerSecondLastInterval();            
+
+            foreach (var o in POCTestResults.opTypes)
             {
-                logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:#,#,,} {1} per second since last report ", results[o], o));
+                logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:#,##0} {1} per second since last report ", results[o], o));               
 
-                logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0},{1:#,#,,},{2:#,#,,}",
-                    todaysdate, testResults.GetSecondsElapsed(), insertsDone));
-
-                Int64 opsDone = testResults.GetOpsDone(o);
+                var opsDone = testResults.GetOpsDone(o);
                 if (opsDone > 0)
                 {
-                    Double fastops = 100 - (testResults.GetSlowOps(o) * 100.0)
-                            / opsDone;
-                    logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1:#,#,,} milliseconds",
+                    var fastops = 100 - (testResults.GetSlowOps(o) * 100.0) / opsDone;
+                    logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1} milliseconds",
                         fastops, testOpts.slowThreshold));
                 }
                 else
                 {
-                    logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1:#,#,,} milliseconds",
+                    logger.Info(String.Format(CultureInfo.CurrentUICulture, "{0:0.##} % in under {1} milliseconds",
                         (float)100, testOpts.slowThreshold));
                 }
             }
+            logger.Info("\n");
         }
 
-        public void run(Object arg)
+        public Task run()
         {
-            logData();
+            timer = new Timer(logData, null, testOpts.reportTime * 1000, Timeout.Infinite);
+            return Task.CompletedTask;
         }
 
         /**
@@ -98,7 +97,7 @@ namespace POCDriver_csharp
 
             logger.Info("------------------------");
             logger.Info(String.Format(CultureInfo.CurrentUICulture,
-                "After {0:#,#,,} seconds, {1:#,#,,} new records inserted - collection has {2:#,#,,} in total \n",
+                "After {0} seconds, {1} new records inserted - collection has {2} in total \n",
                 secondsElapsed, insertsDone, testResults.initialCount + insertsDone));
 
             foreach (var o in POCTestResults.opTypes)
@@ -106,7 +105,7 @@ namespace POCDriver_csharp
                 Int64 opsDone = testResults.GetOpsDone(o);
 
                 logger.Info(String.Format(CultureInfo.CurrentUICulture,
-                    "{0:#,#,,} {1} per second on average", (int)(1f * opsDone / secondsElapsed), o));
+                    "{0} {1} per second on average", (int)(1f * opsDone / secondsElapsed), o));
             }
         }
     }

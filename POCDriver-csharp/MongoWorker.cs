@@ -53,6 +53,7 @@ namespace POCDriver_csharp
         private IList<BsonDocument> keyStack;
         private int lastCollection;
         private int maxCollections;
+        private bool isCancelled = false;
 
         private void ReviewShards()
         {
@@ -206,7 +207,7 @@ namespace POCDriver_csharp
                 zipf = new Zipf(0.99, testOpts.zipfsize);
             }
 
-            if (testOpts.workflow != null)
+            if (!string.IsNullOrWhiteSpace(testOpts.workflow))
             {
                 workflow = testOpts.workflow;
                 workflowed = true;
@@ -237,8 +238,7 @@ namespace POCDriver_csharp
             BsonDocument query = new BsonDocument();
 
             //TODO Refactor the query for 3.0 driver
-            BsonDocument limits = new BsonDocument("$gt", new BsonDocument("w",
-                    workerID));
+            BsonDocument limits = new BsonDocument("$gt", new BsonDocument("w", workerID));
             limits.Add("$lt", new BsonDocument("w", workerID + 1));
 
             query.Add("_id", limits);
@@ -250,7 +250,7 @@ namespace POCDriver_csharp
             BsonDocument myDoc = coll.Find(query)
                 .Project(projection)
                 .Sort(sort)
-                .First();
+                .FirstOrDefault();
             if (myDoc != null)
             {
                 BsonDocument id = (BsonDocument)myDoc.GetValue("_id");
@@ -287,7 +287,6 @@ namespace POCDriver_csharp
 
                     //I need to resubmit it here
                     String error = e.Message;
-
 
                     //Check if it's a sup key and remove it
                     var p = BsonRegularExpression.Create("dup key: \\{ : \\{ w: (.*?), i: (.*?) }");
@@ -341,7 +340,6 @@ namespace POCDriver_csharp
 
             var taken = (DateTime.Now - starttime).TotalMilliseconds;
 
-
             var icount = bwResult.InsertedCount;
             var ucount = bwResult.MatchedCount;
 
@@ -354,7 +352,6 @@ namespace POCDriver_csharp
             }
             testResults.RecordOpsDone("inserts", icount);
         }
-
 
         private BsonDocument simpleKeyQuery()
         {
@@ -374,7 +371,7 @@ namespace POCDriver_csharp
 
             if (testOpts.projectFields == 0)
             {
-                myDoc = coll.Find(query).First();
+                myDoc = coll.Find(query).FirstOrDefault();
             }
             else
             {
@@ -390,7 +387,7 @@ namespace POCDriver_csharp
                     projection.Include(field);
                 myDoc = coll.Find(query)
                     .Project<BsonDocument>(projection.Combine())
-                    .First();
+                    .FirstOrDefault();
             }
 
             if (myDoc != null)
@@ -404,7 +401,6 @@ namespace POCDriver_csharp
             }
             return myDoc;
         }
-
 
         private void rangeQuery()
         {
@@ -451,7 +447,6 @@ namespace POCDriver_csharp
                 testResults.RecordSlowOp("rangequeries", 1);
             }
             testResults.RecordOpsDone("rangequeries", 1);
-
         }
 
         private void rotateCollection()
@@ -532,6 +527,11 @@ namespace POCDriver_csharp
             return tr;
         }
 
+        public void Cancel()
+        {
+            isCancelled = true;
+            logger.Info("Cancellation requested...");
+        }
 
         public void run(Object arg)
         {
@@ -543,11 +543,12 @@ namespace POCDriver_csharp
                 bulkWriter = new List<WriteModel<BsonDocument>>();
                 int bulkops = 0;
 
-
                 int c = 0;
                 logger.Info("Worker thread " + workerID + " Started.");
                 while (testResults.GetSecondsElapsed() < testOpts.duration)
                 {
+                    if (isCancelled)
+                        break ;
                     c++;
                     //Timer isn't granullar enough to sleep for each
                     if (testOpts.opsPerSecond > 0)
@@ -668,7 +669,6 @@ namespace POCDriver_csharp
                     }
 
                 }
-
             }
             catch (Exception e)
             {

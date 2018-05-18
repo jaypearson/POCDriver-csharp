@@ -139,33 +139,46 @@ namespace POCDriver_csharp
             PrepareSystem(testOpts, testResults);
             // Report on progress by looking at testResults
             var reporter = new POCTestReporter(testResults, mongoClient, testOpts);
-            using (var timer = new Timer(new TimerCallback(reporter.run), null, 0, testOpts.reportTime))
+
+            try
+            {                 
+                // Using a thread pool we keep filled
+                // +1 for the reporter thread the timer will use
+                ThreadPool.SetMaxThreads(testOpts.numThreads+1, testOpts.numThreads+1);
+
+                // Allow for multiple clients to run -
+                // Check for testOpts.threadIdStart - this should be an Int32 to start
+                // the 'workerID' for each set of threads.
+                int threadIdStart = testOpts.threadIdStart;
+                //Console.Out.WriteLine("threadIdStart="+threadIdStart);
+                reporter.run();
+                var workers = new List<MongoWorker>();
+                var tasks = new List<Task>();
+                for (int i = threadIdStart; i < (testOpts.numThreads + threadIdStart); i++)
+                {
+                    var worker = new MongoWorker(mongoClient, testOpts, testResults, i);
+                    var task = new Task(new Action(() => worker.run(null)));
+                    workers.Add(worker);
+                    tasks.Add(task);
+                    task.Start();
+                }
+
+                Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e) {
+                    e.Cancel = true;
+                    foreach (var worker in workers)
+                        worker.Cancel();
+                    logger.Info("Cancellation requested - waiting on threads to finish");
+                };
+
+                Task.WaitAll(tasks.ToArray());
+                //Console.Out.WriteLine("All Threads Complete: " + b);
+            }
+            catch (Exception e)
             {
-                try
-                {
-                    // Using a thread pool we keep filled
-                    ThreadPool.SetMaxThreads(testOpts.numThreads, testOpts.numThreads);
-
-                    // Allow for multiple clients to run -
-                    // Check for testOpts.threadIdStart - this should be an Int32 to start
-                    // the 'workerID' for each set of threads.
-                    int threadIdStart = testOpts.threadIdStart;
-                    //Console.Out.WriteLine("threadIdStart="+threadIdStart);
-                    var workers = new List<Task>();
-                    for (int i = threadIdStart; i < (testOpts.numThreads + threadIdStart); i++)
-                    {
-                        var worker = new MongoWorker(mongoClient, testOpts, testResults, i);
-                        workers.Add(Task.Factory.StartNew(new Action(() => worker.run(null))));
-                    }
-
-                    Task.WaitAll(workers.ToArray());
-                    //Console.Out.WriteLine("All Threads Complete: " + b);
-                }
-                catch (Exception e)
-                {
-                    Console.Out.WriteLine(e.Message);
-                }
-
+                Console.Out.WriteLine(e.Message);
+            }
+            finally
+            {
                 // do const report
                 reporter.constReport();
             }
